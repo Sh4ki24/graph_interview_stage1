@@ -1,0 +1,26 @@
+server:
+  port: 8080 
+  metrics_port: 9090
+  monitoring: true
+
+database:
+  url: postgres://todo:todo@localhost:5433/todo?sslmode=disable
+  pool:
+    max_conns: 10
+    min_conns: 2
+    max_conn_lifetime: 30m
+    max_conn_idle_time: 5m
+
+auth:
+  admin_username: admin
+  admin_password: admin123
+
+log:
+  level: info # debug | info | warn | error
+
+pagination:
+  default_limit: 20
+  max_limit: 100
+
+seeder:
+  count: 100 # tasks inserted by `make seed`

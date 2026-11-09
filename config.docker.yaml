@@ -1,0 +1,27 @@
+# Configuration used inside docker compose (database host is the postgres service).
+server:
+  port: 8080
+  metrics_port: 9090
+  monitoring: true
+
+database:
+  url: postgres://todo:todo@postgres:5432/todo?sslmode=disable
+  pool:
+    max_conns: 10
+    min_conns: 2
+    max_conn_lifetime: 30m
+    max_conn_idle_time: 5m
+
+auth:
+  admin_username: admin
+  admin_password: admin123
+
+log:
+  level: info
+
+pagination:
+  default_limit: 20
+  max_limit: 100
+
+seeder:
+  count: 100
