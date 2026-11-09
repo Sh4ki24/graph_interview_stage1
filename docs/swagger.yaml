@@ -1,0 +1,409 @@
+basePath: /
+definitions:
+  routes.AuthInput:
+    properties:
+      password:
+        example: secret123
+        maxLength: 100
+        minLength: 1
+        type: string
+      username:
+        example: alice
+        maxLength: 50
+        minLength: 1
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  routes.CreateTaskInput:
+    properties:
+      description:
+        example: 2 liters
+        type: string
+      title:
+        example: Buy milk
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - title
+    type: object
+  routes.ListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/task.Task'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 42
+        type: integer
+    type: object
+  routes.TaskResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        example: 2 liters, lactose free
+        type: string
+      id:
+        example: 1
+        type: integer
+      status:
+        example: todo
+        type: string
+      title:
+        example: Buy milk
+        type: string
+      updated_at:
+        type: string
+    type: object
+  routes.TokenResponse:
+    properties:
+      role:
+        example: user
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      user_id:
+        example: 3
+        type: integer
+      username:
+        example: alice
+        type: string
+    type: object
+  routes.UpdateTaskInput:
+    properties:
+      description:
+        example: 3 liters instead
+        type: string
+      status:
+        enum:
+        - todo
+        - progress
+        - done
+        - close
+        example: progress
+        type: string
+      title:
+        example: Buy milk now
+        maxLength: 200
+        minLength: 1
+        type: string
+    type: object
+  task.Status:
+    enum:
+    - todo
+    - progress
+    - done
+    - close
+    type: string
+    x-enum-comments:
+      StatusClose: close == soft delete
+    x-enum-descriptions:
+    - ""
+    - ""
+    - ""
+    - close == soft delete
+    x-enum-varnames:
+    - StatusTodo
+    - StatusProgress
+    - StatusDone
+    - StatusClose
+  task.Task:
+    properties:
+      created_at:
+        type: string
+      description:
+        example: 2 liters, lactose free
+        type: string
+      id:
+        example: 1
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/task.Status'
+        example: todo
+      title:
+        example: Buy milk
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        example: 7
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: A todo list API with JWT authentication.
+  title: Todo API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/routes.AuthInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/routes.TokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log in and receive a JWT
+      tags:
+      - auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/routes.AuthInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/routes.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /tasks:
+    get:
+      parameters:
+      - description: Bearer <token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - default: 1
+        description: 1-based page
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: page size (max 100)
+        in: query
+        name: limit
+        type: integer
+      - default: '""'
+        description: todo | progress | done
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/routes.ListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List tasks with pagination and optional status filter
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bearer <token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: task payload
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/routes.CreateTaskInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/routes.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a task
+      tags:
+      - tasks
+  /tasks/{id}:
+    delete:
+      parameters:
+      - description: Bearer <token> (admin)
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: task id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/routes.TaskResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Close a task (soft delete). Admin only.
+      tags:
+      - tasks
+    get:
+      parameters:
+      - description: Bearer <token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: task id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/routes.TaskResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a task by id
+      tags:
+      - tasks
+    patch:
+      consumes:
+      - application/json
+      description: A task cannot jump directly from todo to done. Close is the soft
+        delete.
+      parameters:
+      - description: Bearer <token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: task id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: fields to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/routes.UpdateTaskInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/routes.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a task (partial). Status must follow todo -> progress -> done
+        -> close
+      tags:
+      - tasks
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
